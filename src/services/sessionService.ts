@@ -74,6 +74,18 @@ export const calculateEmotionalAverages = (
 };
 
 /**
+ * Get emotional averages for a specific user
+ * Combines getRecentUserSessions and calculateEmotionalAverages
+ */
+export const getUserEmotionalAverages = (
+  userId: string,
+  days: number = 30
+): { avgMood: number; avgDistress: number; avgStability: number } => {
+  const sessions = getRecentUserSessions(userId, days);
+  return calculateEmotionalAverages(sessions);
+};
+
+/**
  * Analyze emotional trends over time
  * Returns a trend analysis of the user's emotional state
  */
