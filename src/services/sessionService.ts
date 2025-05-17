@@ -1,11 +1,12 @@
 import { EQSession, EmotionalState, User } from '../types';
 import { getEmotionalScores } from '../utils/emotionUtils';
+import { realtimeService } from './realtimeService';
 
 // In-memory storage for EQ sessions
 let eqSessions: EQSession[] = [];
 
 /**
- * Create and save a new EQ session
+ * Create and save a new EQ session with real-time updates
  */
 export const createAndSaveEQSession = (
   user: User,
@@ -27,6 +28,10 @@ export const createAndSaveEQSession = (
   };
   
   eqSessions.push(session);
+  
+  // Emit real-time update
+  realtimeService.simulateUpdate('eq', session);
+  
   return session;
 };
 
