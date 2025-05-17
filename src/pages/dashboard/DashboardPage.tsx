@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   LineChart, BarChart, TrendingUp, TrendingDown, Minus, AlertTriangle, 
-  CheckCircle, Flame, AlertOctagon, Trophy, Activity 
+  CheckCircle, Flame, AlertOctagon, Trophy, Activity, Target, Star,
+  Award, Book, Zap, Calendar 
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Link } from 'react-router-dom';
@@ -14,9 +15,10 @@ import {
   getUserDebateAverages,
   analyzeDebatePerformanceTrends
 } from '../../services/debateService';
+import { getPersonalizedMetrics } from '../../services/personalizationService';
 import { getRealTimeAnalytics, type RealTimeMetrics } from '../../services/analyticsService';
 import { realtimeService } from '../../services/realtimeService';
-import { EQSession, DebateSession } from '../../types';
+import { EQSession, DebateSession, PersonalizedMetrics } from '../../types';
 import { Line, Radar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -62,9 +64,10 @@ const DashboardPage: React.FC = () => {
   const [debateTrends, setDebateTrends] = useState<any>(null);
   const [realTimeMetrics, setRealTimeMetrics] = useState<RealTimeMetrics | null>(null);
   const [showWarnings, setShowWarnings] = useState(true);
+  const [personalizedMetrics, setPersonalizedMetrics] = useState<PersonalizedMetrics | null>(null);
 
   // Update dashboard data when new sessions arrive
-  const updateDashboardData = useCallback(() => {
+  const updateDashboardData = useCallback(async () => {
     if (user) {
       // Get session data
       const eqSessions = getRecentUserSessions(user.id);
@@ -89,6 +92,10 @@ const DashboardPage: React.FC = () => {
       // Get real-time analytics for dashboard
       const analytics = getRealTimeAnalytics(user.id);
       setRealTimeMetrics(analytics);
+
+      // Get personalized metrics
+      const metrics = await getPersonalizedMetrics(user.id);
+      setPersonalizedMetrics(metrics);
     }
   }, [user]);
 
@@ -96,18 +103,18 @@ const DashboardPage: React.FC = () => {
   useEffect(() => {
     if (user) {
       // Initial data load
-      updateDashboardData();
+      updateDashboardData().catch(console.error);
       
       // Subscribe to real-time updates
       const unsubscribeEQ = realtimeService.subscribe('eq', (session: EQSession) => {
         if (session.userId === user.id) {
-          updateDashboardData();
+          updateDashboardData().catch(console.error);
         }
       });
       
       const unsubscribeDebate = realtimeService.subscribe('debate', (session: DebateSession) => {
         if (session.userId === user.id) {
-          updateDashboardData();
+          updateDashboardData().catch(console.error);
         }
       });
       
@@ -211,6 +218,143 @@ const DashboardPage: React.FC = () => {
         </div>
         <p className="text-gray-600 mt-1">Here's an overview of your emotional and debate performance</p>
       </header>
+
+      {/* Daily Progress & Streaks */}
+      {personalizedMetrics && (
+        <div className="mb-6">
+          <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-6 text-white">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="flex items-center space-x-4">
+                <div className="bg-white/20 rounded-lg p-3">
+                  <Target className="h-6 w-6" />
+                </div>
+                <div>
+                  <p className="text-white/80 text-sm">Daily Sessions</p>
+                  <p className="text-2xl font-semibold">
+                    {personalizedMetrics.dailyGoals.sessionsCompleted} / {personalizedMetrics.dailyGoals.sessionsTarget}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-4">
+                <div className="bg-white/20 rounded-lg p-3">
+                  <Flame className="h-6 w-6" />
+                </div>
+                <div>
+                  <p className="text-white/80 text-sm">Current Streak</p>
+                  <p className="text-2xl font-semibold">
+                    {personalizedMetrics.dailyGoals.streakDays} days
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-4">
+                <div className="bg-white/20 rounded-lg p-3">
+                  <Star className="h-6 w-6" />
+                </div>
+                <div>
+                  <p className="text-white/80 text-sm">Weekly Growth</p>
+                  <p className="text-2xl font-semibold">
+                    +{Math.max(
+                      personalizedMetrics.weeklyProgress.emotionalGrowth,
+                      personalizedMetrics.weeklyProgress.debateSkillGrowth
+                    )}%
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Achievements Section */}
+      {personalizedMetrics && personalizedMetrics.achievements.length > 0 && (
+        <div className="mb-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-800">Recent Achievements</h2>
+              <Award className="text-yellow-500" size={24} />
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {personalizedMetrics.achievements.map(achievement => (
+                <div
+                  key={achievement.id}
+                  className="group relative bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg p-4 transition-all hover:shadow-md"
+                >
+                  <div className="flex items-start space-x-3">
+                    <div className="flex-shrink-0 w-10 h-10 bg-white rounded-full flex items-center justify-center text-2xl">
+                      {achievement.icon}
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-gray-800">{achievement.title}</h3>
+                      <p className="text-sm text-gray-600">{achievement.description}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Earned {new Date(achievement.earnedDate).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Personalized Tips */}
+      {personalizedMetrics && personalizedMetrics.personalizedTips.length > 0 && (
+        <div className="mb-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-800">Personalized Tips</h2>
+              <Book className="text-blue-500" size={24} />
+            </div>
+            
+            <div className="space-y-3">
+              {personalizedMetrics.personalizedTips.map((tip, index) => (
+                <div
+                  key={index}
+                  className={`flex items-start space-x-3 p-3 rounded-lg ${
+                    tip.category === 'emotional' ? 'bg-pink-50' :
+                    tip.category === 'debate' ? 'bg-blue-50' :
+                    'bg-gray-50'
+                  }`}
+                >
+                  <div className={`flex-shrink-0 rounded-full p-2 ${
+                    tip.category === 'emotional' ? 'bg-pink-100 text-pink-600' :
+                    tip.category === 'debate' ? 'bg-blue-100 text-blue-600' :
+                    'bg-gray-100 text-gray-600'
+                  }`}>
+                    {tip.category === 'emotional' ? <Activity size={16} /> :
+                     tip.category === 'debate' ? <Zap size={16} /> :
+                     <Calendar size={16} />}
+                  </div>
+                  <p className="text-sm text-gray-700">{tip.tip}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Recent Topics */}
+      {personalizedMetrics && personalizedMetrics.weeklyProgress.topicsExplored.length > 0 && (
+        <div className="mb-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">Topics You've Explored</h2>
+            <div className="flex flex-wrap gap-2">
+              {personalizedMetrics.weeklyProgress.topicsExplored.map((topic, index) => (
+                <span
+                  key={index}
+                  className="px-3 py-1 bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-700 rounded-full text-sm font-medium"
+                >
+                  {topic}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Warnings Section */}
       {showWarnings && realTimeMetrics?.warnings && realTimeMetrics.warnings.length > 0 && (

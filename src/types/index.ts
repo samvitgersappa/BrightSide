@@ -56,3 +56,37 @@ export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;
 }
+
+export interface PersonalizedMetrics {
+  dailyGoals: {
+    sessionsCompleted: number;
+    sessionsTarget: number;
+    streakDays: number;
+  };
+  weeklyProgress: {
+    emotionalGrowth: number;
+    debateSkillGrowth: number;
+    topicsExplored: string[];
+  };
+  achievements: {
+    id: string;
+    title: string;
+    description: string;
+    earnedDate: Date;
+    type: 'streak' | 'milestone' | 'skill' | 'engagement';
+    icon: string;
+  }[];
+  personalizedTips: {
+    category: 'emotional' | 'debate' | 'general';
+    tip: string;
+    priority: number;
+  }[];
+}
+
+export type EmotionalMilestone = {
+  type: 'mood' | 'distress' | 'stability' | 'debate';
+  value: number;
+  date: Date;
+  description: string;
+  isPositive: boolean;
+};
