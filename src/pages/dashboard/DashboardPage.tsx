@@ -15,11 +15,11 @@ import {
   getUserDebateAverages,
   analyzeDebatePerformanceTrends
 } from '../../services/debateService';
+import { getRecentQuizSessions, calculateQuizAnalytics } from '../../services/quizService';
 import { getPersonalizedMetrics } from '../../services/personalizationService';
 import { getRealTimeAnalytics, type RealTimeMetrics } from '../../services/analyticsService';
 import { realtimeService } from '../../services/realtimeService';
 import { EQSession, DebateSession, PersonalizedMetrics } from '../../types';
-import { Line, Radar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -33,6 +33,7 @@ import {
   RadialLinearScale,
   ArcElement
 } from 'chart.js';
+import { Line, Radar, Bar as ChartBar } from 'react-chartjs-2';
 
 // Register Chart.js components
 ChartJS.register(
@@ -52,6 +53,7 @@ const DashboardPage: React.FC = () => {
   const { user } = useAuth();
   const [recentEQSessions, setRecentEQSessions] = useState<EQSession[]>([]);
   const [recentDebateSessions, setRecentDebateSessions] = useState<DebateSession[]>([]);
+  const [recentQuizSessions, setRecentQuizSessions] = useState<any[]>([]);
   // Removed emotionalAverages state as we're using realTimeMetrics
   const [debateAverages, setDebateAverages] = useState({
     avgCoherence: 50,
@@ -113,13 +115,19 @@ const DashboardPage: React.FC = () => {
       const analytics = getRealTimeAnalytics(user.id);
       setRealTimeMetrics(analytics);
 
+      // Get quiz data
+      const recentQuizzes = getRecentQuizSessions(user.id);
+      setRecentQuizSessions(recentQuizzes);
+
       // Get personalized metrics
       const metrics = await getPersonalizedMetrics(user.id);
       setPersonalizedMetrics(metrics);
-    }
-  }, [user]);
 
-  // Set up real-time updates
+      // Get recent quiz sessions
+      const quizSessions = await getRecentQuizSessions(user.id);
+      setRecentQuizSessions(quizSessions);
+    }
+  }, [user]);      // Set up real-time updates
   useEffect(() => {
     if (user) {
       // Initial data load
@@ -163,11 +171,20 @@ const DashboardPage: React.FC = () => {
           });
         }
       });
+
+      // Subscribe to quiz updates
+      const unsubscribeQuiz = realtimeService.subscribe('quiz', (session: any) => {
+        if (session.userId === user.id) {
+          // Update dashboard data when quiz is completed
+          updateDashboardData().catch(console.error);
+        }
+      });
       
       // Cleanup subscriptions
       return () => {
         unsubscribeEQ();
         unsubscribeDebate();
+        unsubscribeQuiz();
       };
     }
   }, [user, updateDashboardData]);
@@ -936,6 +953,89 @@ const DashboardPage: React.FC = () => {
               Simulate Debate Update
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Quiz Performance Card */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 transition-all hover:shadow-md">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-800">CS Quiz Performance</h2>
+          <Book className="text-purple-500" size={24} />
+        </div>
+        
+        {/* Subject Performance Graph */}
+        <div className="h-64 mb-4">
+          {recentQuizSessions.length > 0 ? (
+            <ChartBar
+              data={{
+                labels: Object.keys(calculateQuizAnalytics(recentQuizSessions).subjectBreakdown).map(
+                  subject => subject.charAt(0).toUpperCase() + subject.slice(1).replace(/-/g, ' ')
+                ),
+                datasets: [{
+                  label: 'Average Score',
+                  data: Object.values(calculateQuizAnalytics(recentQuizSessions).subjectBreakdown).map(
+                    (subject: { avgScore: number }) => Math.round(subject.avgScore)
+                  ),
+                  backgroundColor: 'rgba(168, 85, 247, 0.5)',
+                  borderColor: 'rgb(168, 85, 247)',
+                  borderWidth: 1
+                }]
+              }}
+              options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    max: 100
+                  }
+                },
+                plugins: {
+                  legend: {
+                    display: false
+                  }
+                }
+              }}
+            />
+          ) : (
+            <div className="h-full flex items-center justify-center text-gray-500">
+              <p>No quiz data available</p>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-2">
+          <p className="text-sm text-gray-600 mb-2">Recent Quizzes:</p>
+          <div className="space-y-2">
+            {recentQuizSessions.length > 0 ? (
+              recentQuizSessions.slice(0, 3).map((session) => (
+                <div key={session.id} className="flex justify-between items-center">
+                  <div className="flex items-center">
+                    <span className="text-sm font-medium text-gray-700 capitalize">
+                      {session.subject.replace(/-/g, ' ')}
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <span className={`text-sm ${getScoreColor((session.questionsCorrect / session.questionsTotal) * 100)}`}>
+                      {session.questionsCorrect}/{session.questionsTotal} ({Math.round((session.questionsCorrect / session.questionsTotal) * 100)}%)
+                    </span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-sm text-gray-500">No recent quizzes</div>
+            )}
+          </div>
+        </div>
+        
+        <div className="mt-4 flex justify-between items-center">
+          <Link to="/quiz" className="text-sm font-medium text-indigo-600 hover:text-indigo-700">
+            Take a Quiz
+          </Link>
+          <Link to="/analytics" className="text-sm text-gray-500 hover:text-gray-700 flex items-center">
+            <LineChart size={16} className="mr-1" />
+            View details
+          </Link>
         </div>
       </div>
     </div>

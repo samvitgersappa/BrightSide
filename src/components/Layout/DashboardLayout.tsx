@@ -9,7 +9,8 @@ import {
   Settings,
   LogOut,
   Menu,
-  X
+  X,
+  Book
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -27,6 +28,7 @@ const DashboardLayout: React.FC = () => {
     { to: '/dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
     { to: '/eq-bot', icon: <MessageSquare size={20} />, label: 'EQ Bot' },
     { to: '/debate-bot', icon: <MessageCircle size={20} />, label: 'Debate Bot' },
+    { to: '/quiz', icon: <Book size={20} />, label: 'CS Quizzes' },
     { to: '/analytics', icon: <BarChart2 size={20} />, label: 'Analytics' },
     { to: '/settings', icon: <Settings size={20} />, label: 'Settings' },
   ];

@@ -95,3 +95,21 @@ export type EmotionalMilestone = {
   description: string;
   isPositive: boolean;
 };
+
+export interface QuizSession {
+  id: string;
+  userId: string;
+  timestamp: Date;
+  subject: 'algorithms' | 'data-structures' | 'databases' | 'web-dev' | 'cybersecurity' | 'mobile';
+  questionsTotal: number;
+  questionsCorrect: number;
+  eqQuestionsTotal: number;
+  eqQuestionsCorrect: number;
+  emotionalMetrics: {
+    moodScore: number;
+    distressLevel: number;
+    stabilityScore: number;
+    emotionalState: EmotionalState;
+  };
+  summary: string;
+};

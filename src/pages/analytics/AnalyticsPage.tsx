@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { LineChart as ReLineChart, Line as ReLine, BarChart as ReBarChart, Bar as ReBar, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip, Legend as ReLegend, ResponsiveContainer } from 'recharts';
-import { Calendar, BarChart as BarChartIcon, Activity, Brain } from 'lucide-react';
+import { Calendar, BarChart as BarChartIcon, Activity, Brain, Book, Code, Database, Network, Shield, Smartphone } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { getRecentUserSessions } from '../../services/sessionService';
 import { getRecentUserDebateSessions } from '../../services/debateService';
+import { getRecentQuizSessions, calculateQuizAnalytics, generateSampleQuizSessions } from '../../services/quizService';
 import { realtimeService } from '../../services/realtimeService';
+import { QuizSession } from '../../types';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { Pie as ChartPie, Bar as ChartBar, Line as ChartLine } from 'react-chartjs-2';
@@ -37,10 +40,11 @@ ChartJS.register(
 
 const AnalyticsPage: React.FC = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'eq' | 'debate'>('eq');
+  const [activeTab, setActiveTab] = useState<'eq' | 'debate' | 'quiz'>('eq');
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'all'>('all');
   const [eqData, setEQData] = useState<any[]>([]);
   const [debateData, setDebateData] = useState<any[]>([]);
+  const [quizData, setQuizData] = useState<QuizSession[]>([]);
 
   // Fetch initial data and subscribe to real-time updates
   useEffect(() => {
@@ -48,6 +52,13 @@ const AnalyticsPage: React.FC = () => {
     // Initial fetch
     setEQData(getRecentUserSessions(user.id, 365));
     setDebateData(getRecentUserDebateSessions(user.id, 365));
+    setQuizData(getRecentQuizSessions(user.id, 365));
+
+    // Generate sample quiz data if none exists (for demo)
+    if (getRecentQuizSessions(user.id).length === 0) {
+      generateSampleQuizSessions(user.id);
+      setQuizData(getRecentQuizSessions(user.id, 365));
+    }
 
     // Real-time listeners
     const unsubEQ = realtimeService.subscribe('eq', (session: any) => {
@@ -588,6 +599,19 @@ const AnalyticsPage: React.FC = () => {
               Debate Performance
             </span>
           </button>
+          <button
+            onClick={() => setActiveTab('quiz')}
+            className={`ml-6 px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+              activeTab === 'quiz'
+                ? 'border-indigo-500 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <span className="flex items-center">
+              <Book className="h-4 w-4 mr-2" />
+              CS Quizzes
+            </span>
+          </button>
         </div>
         
         {/* Time range selector */}
@@ -630,7 +654,286 @@ const AnalyticsPage: React.FC = () => {
         </div>
         
         {/* Main Content */}
-        {activeTab === 'eq' ? (
+        {activeTab === 'quiz' ? (
+          <>
+            {/* Quiz Analytics Content */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-800">CS Quiz Performance</h2>
+                <Book className="h-5 w-5 text-gray-400" />
+              </div>
+              
+              {quizData.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-100 text-indigo-600 mb-4">
+                    <Book className="h-8 w-8" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-800 mb-2">Complete Your First Quiz</h3>
+                  <p className="text-gray-600 max-w-md mx-auto">
+                    Take CS engineering quizzes to test your knowledge while we measure emotional intelligence factors. 
+                    Your results will appear here.
+                  </p>
+                  <div className="mt-6">
+                    <Link to="/quiz" className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                      Start a Quiz
+                    </Link>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Quiz Performance Summary */}
+                  {(() => {
+                    const analytics = calculateQuizAnalytics(quizData);
+                    const filteredQuizData = filterDataByTimeRange(quizData);
+                    const recentAnalytics = calculateQuizAnalytics(filteredQuizData);
+
+                    return (
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="text-sm font-medium text-gray-500">Overall Score</h3>
+                            <span className={`text-lg font-semibold ${getScoreColor(recentAnalytics.averageScore)}`}>
+                              {Math.round(recentAnalytics.averageScore)}%
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div 
+                              className="bg-indigo-600 h-2 rounded-full" 
+                              style={{ width: `${recentAnalytics.averageScore}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                        
+                        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="text-sm font-medium text-gray-500">EQ Component Score</h3>
+                            <span className={`text-lg font-semibold ${getScoreColor(recentAnalytics.averageEQScore)}`}>
+                              {Math.round(recentAnalytics.averageEQScore)}%
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div 
+                              className="bg-purple-600 h-2 rounded-full" 
+                              style={{ width: `${recentAnalytics.averageEQScore}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                        
+                        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="text-sm font-medium text-gray-500">Avg Stability</h3>
+                            <span className={`text-lg font-semibold ${getScoreColor(recentAnalytics.avgStabilityScore)}`}>
+                              {Math.round(recentAnalytics.avgStabilityScore)}/100
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div 
+                              className="bg-green-600 h-2 rounded-full" 
+                              style={{ width: `${recentAnalytics.avgStabilityScore}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                        
+                        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                          <div className="flex items-center justify-between mb-2">
+                            <h3 className="text-sm font-medium text-gray-500">Avg Distress</h3>
+                            <span className={`text-lg font-semibold ${getScoreColor(100 - recentAnalytics.avgDistressLevel)}`}>
+                              {Math.round(recentAnalytics.avgDistressLevel)}/100
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div 
+                              className="bg-red-600 h-2 rounded-full" 
+                              style={{ width: `${recentAnalytics.avgDistressLevel}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  
+                  {/* Subject Performance Chart */}
+                  <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Subject Performance</h3>
+                    <div className="h-64">
+                      <ChartBar
+                        data={{
+                          labels: Object.keys(calculateQuizAnalytics(filterDataByTimeRange(quizData)).subjectBreakdown).map(
+                            subject => subject.charAt(0).toUpperCase() + subject.slice(1).replace(/-/g, ' ')
+                          ),
+                          datasets: [{
+                            label: 'Average Score',
+                            data: Object.values(calculateQuizAnalytics(filterDataByTimeRange(quizData)).subjectBreakdown).map(
+                              subject => Math.round(subject.avgScore)
+                            ),
+                            backgroundColor: [
+                              'rgba(99, 102, 241, 0.8)',  // Indigo
+                              'rgba(168, 85, 247, 0.8)',  // Purple
+                              'rgba(59, 130, 246, 0.8)',  // Blue
+                              'rgba(16, 185, 129, 0.8)',  // Green
+                              'rgba(245, 158, 66, 0.8)',  // Orange
+                              'rgba(239, 68, 68, 0.8)',   // Red
+                            ]
+                          }]
+                        }}
+                        options={{
+                          responsive: true,
+                          scales: {
+                            y: {
+                              beginAtZero: true,
+                              max: 100
+                            }
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Recent Quiz Sessions */}
+                  <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Recent Quiz Sessions</h3>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead>
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">EQ Score</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Emotional State</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {filterDataByTimeRange(quizData).map((session) => (
+                            <tr key={session.id}>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {formatDate(session.timestamp)}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm capitalize">
+                                {session.subject.replace(/-/g, ' ')}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm">
+                                <span className={`font-medium ${getScoreColor((session.questionsCorrect / session.questionsTotal) * 100)}`}>
+                                  {session.questionsCorrect}/{session.questionsTotal} ({Math.round((session.questionsCorrect / session.questionsTotal) * 100)}%)
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm">
+                                <span className={`font-medium ${getScoreColor((session.eqQuestionsCorrect / session.eqQuestionsTotal) * 100)}`}>
+                                  {session.eqQuestionsCorrect}/{session.eqQuestionsTotal} ({Math.round((session.eqQuestionsCorrect / session.eqQuestionsTotal) * 100)}%)
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm">
+                                <span className="capitalize">{session.emotionalMetrics.emotionalState}</span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">EQ Components in Quizzes</h3>
+                <p className="text-gray-600 mb-4">
+                  CS quizzes contain emotional intelligence components that assess how you handle technical decisions under different emotional states:
+                </p>
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg">
+                    <div className="flex-shrink-0 bg-blue-100 p-2 rounded-full text-blue-600">
+                      <Brain size={16} />
+                    </div>
+                    <div className="text-sm text-blue-800">
+                      <p className="font-medium">Technical Decision Making</p>
+                      <p>How you approach solving problems under pressure</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3 p-3 bg-purple-50 rounded-lg">
+                    <div className="flex-shrink-0 bg-purple-100 p-2 rounded-full text-purple-600">
+                      <Activity size={16} />
+                    </div>
+                    <div className="text-sm text-purple-800">
+                      <p className="font-medium">Emotional Response</p>
+                      <p>How emotions like anxiety or excitement affect your choices</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg">
+                    <div className="flex-shrink-0 bg-green-100 p-2 rounded-full text-green-600">
+                      <Book size={16} />
+                    </div>
+                    <div className="text-sm text-green-800">
+                      <p className="font-medium">Knowledge Application</p>
+                      <p>How you apply technical knowledge in different emotional states</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Subjects & Topics</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className="bg-indigo-100 p-2 rounded-full text-indigo-600 mr-3">
+                        <Code size={16} />
+                      </div>
+                      <span className="font-medium text-gray-800">Algorithms</span>
+                    </div>
+                    <span className="text-sm bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full">10+ questions</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className="bg-blue-100 p-2 rounded-full text-blue-600 mr-3">
+                        <Book size={16} />
+                      </div>
+                      <span className="font-medium text-gray-800">Data Structures</span>
+                    </div>
+                    <span className="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full">10+ questions</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className="bg-green-100 p-2 rounded-full text-green-600 mr-3">
+                        <Database size={16} />
+                      </div>
+                      <span className="font-medium text-gray-800">Databases</span>
+                    </div>
+                    <span className="text-sm bg-green-100 text-green-800 px-2 py-1 rounded-full">10+ questions</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className="bg-purple-100 p-2 rounded-full text-purple-600 mr-3">
+                        <Network size={16} />
+                      </div>
+                      <span className="font-medium text-gray-800">Web Development</span>
+                    </div>
+                    <span className="text-sm bg-purple-100 text-purple-800 px-2 py-1 rounded-full">10+ questions</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className="bg-red-100 p-2 rounded-full text-red-600 mr-3">
+                        <Shield size={16} />
+                      </div>
+                      <span className="font-medium text-gray-800">Cybersecurity</span>
+                    </div>
+                    <span className="text-sm bg-red-100 text-red-800 px-2 py-1 rounded-full">10+ questions</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className="bg-orange-100 p-2 rounded-full text-orange-600 mr-3">
+                        <Smartphone size={16} />
+                      </div>
+                      <span className="font-medium text-gray-800">Mobile Development</span>
+                    </div>
+                    <span className="text-sm bg-orange-100 text-orange-800 px-2 py-1 rounded-full">10+ questions</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        ) : activeTab === 'eq' ? (
           <>
             {/* EQ Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
