@@ -521,6 +521,53 @@ const DebateBotPage: React.FC = () => {
             >
               <Book size={20} />
             </button>
+            {/* End Debate Button */}
+            <button
+              onClick={async () => {
+                // Save debate session before resetting, if debate has started and there are user messages
+                if (debateState.started && user && messages.some(m => m.role === 'user')) {
+                  const fullTranscript = messages
+                    .filter(m => m.role !== 'system')
+                    .map(m => `${m.role === 'user' ? 'User' : 'Bot'}: ${m.content}`)
+                    .join('\n\n');
+                  const currentTopic = debateTopics.find(t => t.id === debateState.topic);
+                  const topicTitle = currentTopic ? currentTopic.title : "Custom Topic";
+                  // Use the last argument scores if available, else defaults
+                  let coherence = 80, persuasiveness = 80, knowledgeDepth = 80, articulation = 80;
+                  const lastBotMsg = [...messages].reverse().find(m => m.role === 'bot' && m.score);
+                  if (lastBotMsg && lastBotMsg.score) {
+                    coherence = lastBotMsg.score;
+                    persuasiveness = lastBotMsg.score;
+                    knowledgeDepth = lastBotMsg.score;
+                    articulation = lastBotMsg.score;
+                  }
+                  try {
+                    const mod = await import('../../services/debateService');
+                    mod.createAndSaveDebateSession(
+                      user.id,
+                      topicTitle,
+                      fullTranscript,
+                      coherence,
+                      persuasiveness,
+                      knowledgeDepth,
+                      articulation
+                    );
+                  } catch (e) {
+                    // Ignore errors on end debate save
+                  }
+                }
+                setDebateState({ topic: null, stance: null, started: false, score: 0 });
+                setMessages(initialConversation);
+                setInput("");
+                setErrorMessage("");
+                setShowAlert(false);
+                setShowTips(true);
+              }}
+              className="ml-2 bg-red-500 text-white px-3 py-1 rounded-lg hover:bg-red-600 transition-colors text-sm"
+              title="End Debate"
+            >
+              End Debate
+            </button>
           </div>
         )}
       </header>
