@@ -77,20 +77,28 @@ async def emergency_notification(request: EmergencyAlertRequest = Body(...)):
             return {"status": "warning", "message": "No valid email addresses found in contacts"}
         
         # Call the email service function
-        success = send_emergency_alert(
-            user_data=user_dict,
-            emotion_score=request.emotionScore,
-            message=request.message,
-            relationships=request.relationships
-        )
+        try:
+            success = send_emergency_alert(
+                user_data=user_dict,
+                emotion_score=request.emotionScore,
+                message=request.message,
+                relationships=request.relationships
+            )
+        except Exception as e:
+            # Log the error and return a detailed error message
+            import traceback
+            tb = traceback.format_exc()
+            return {"status": "error", "message": f"Exception in send_emergency_alert: {str(e)}", "trace": tb}
         
         if success:
             return {"status": "success", "message": "Emergency notifications sent successfully"}
         else:
-            raise HTTPException(status_code=500, detail="Failed to send emergency notifications")
+            return {"status": "error", "message": "Failed to send emergency notifications. Check backend logs and SMTP credentials."}
     
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error sending notifications: {str(e)}")
+        import traceback
+        tb = traceback.format_exc()
+        return {"status": "error", "message": f"Error sending notifications: {str(e)}", "trace": tb}
 
 
 @app.get("/api/health")
