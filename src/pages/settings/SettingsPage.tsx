@@ -93,19 +93,16 @@ const SettingsPage: React.FC = () => {
   };
   
   // Validate contact form
-  const validateContactForm = (data: typeof newContact) => {
+  const validateContactForm = (data: typeof newContact | Contact) => {
     const newErrors: Record<string, string> = {};
-    
     if (!data.name.trim()) {
       newErrors.contact_name = 'Name is required';
     }
-    
-    if (!data.email.trim()) {
+    if (!(data.email ?? '').trim()) {
       newErrors.contact_email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(data.email)) {
+    } else if (!/\S+@\S+\.\S+/.test(data.email ?? '')) {
       newErrors.contact_email = 'Email is invalid';
     }
-    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -115,7 +112,12 @@ const SettingsPage: React.FC = () => {
     e.preventDefault();
     
     if (isEditing && editingContact) {
-      if (validateContactForm(editingContact)) {
+      const normalized = {
+        ...editingContact,
+        email: editingContact.email ?? '',
+        phone: editingContact.phone ?? '',
+      };
+      if (validateContactForm(normalized)) {
         setContacts(contacts.map(c => c.id === isEditing ? editingContact : c));
         setIsEditing(null);
         setEditingContact(null);
@@ -491,9 +493,7 @@ const SettingsPage: React.FC = () => {
                           type="email"
                           value={editingContact?.email || ''}
                           onChange={handleContactChange}
-                          className={`block w-full px-3 py-2 border ${
-                            errors.contact_email ? 'border-red-300' : 'border-gray-300'
-                          } rounded-lg focus:ring-indigo-500 focus:border-indigo-500`}
+                          className={`block w-full px-3 py-2 border ${errors.contact_email ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:ring-indigo-500 focus:border-indigo-500`}
                           placeholder="contact@example.com"
                         />
                         {errors.contact_email && <p className="mt-1 text-sm text-red-600">{errors.contact_email}</p>}

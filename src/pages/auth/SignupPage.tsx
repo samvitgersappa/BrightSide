@@ -10,28 +10,86 @@ const SignupPage: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [emergencyContactName, setEmergencyContactName] = useState('');
+  const [emergencyContactRelationship, setEmergencyContactRelationship] = useState('');
+  const [emergencyContactEmail, setEmergencyContactEmail] = useState('');
   
   const { signup } = useAuth();
   const navigate = useNavigate();
 
+  const [nameError, setNameError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
+  const [emergencyContactNameError, setEmergencyContactNameError] = useState('');
+  const [emergencyContactRelationshipError, setEmergencyContactRelationshipError] = useState('');
+  const [emergencyContactEmailError, setEmergencyContactEmailError] = useState('');
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
+    setNameError('');
+    setEmailError('');
+    setPasswordError('');
+    setConfirmPasswordError('');
+    setEmergencyContactNameError('');
+    setEmergencyContactRelationshipError('');
+    setEmergencyContactEmailError('');
+
+    let valid = true;
+
+    if (!name.trim()) {
+      setNameError('Name is required');
+      valid = false;
     }
-    
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
-      return;
+    if (!email.trim()) {
+      setEmailError('Email is required');
+      valid = false;
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      setEmailError('Email is invalid');
+      valid = false;
     }
-    
+    if (!password) {
+      setPasswordError('Password is required');
+      valid = false;
+    } else if (password.length < 6) {
+      setPasswordError('Password must be at least 6 characters');
+      valid = false;
+    }
+    if (!confirmPassword) {
+      setConfirmPasswordError('Please confirm your password');
+      valid = false;
+    } else if (password !== confirmPassword) {
+      setConfirmPasswordError('Passwords do not match');
+      valid = false;
+    }
+    if (!emergencyContactName.trim()) {
+      setEmergencyContactNameError('Emergency contact name is required');
+      valid = false;
+    }
+    if (!emergencyContactRelationship.trim()) {
+      setEmergencyContactRelationshipError('Relationship is required');
+      valid = false;
+    }
+    if (!emergencyContactEmail.trim()) {
+      setEmergencyContactEmailError('Emergency contact email is required');
+      valid = false;
+    } else if (!/\S+@\S+\.\S+/.test(emergencyContactEmail)) {
+      setEmergencyContactEmailError('Emergency contact email is invalid');
+      valid = false;
+    }
+    if (!valid) return;
     setIsSubmitting(true);
-    
     try {
-      await signup(name, email, password);
+      // Prepare emergency contact object
+      const emergencyContact = {
+        id: Date.now().toString(),
+        name: emergencyContactName,
+        email: emergencyContactEmail,
+        relationship: emergencyContactRelationship as 'counselor' | 'parent' | 'friend',
+      };
+      // Pass emergency contact to signup (update your backend to accept this)
+      await signup(name, email, password, [emergencyContact]);
       navigate('/dashboard');
     } catch (err) {
       setError('Failed to create an account. Please try again.');
@@ -64,11 +122,12 @@ const SignupPage: React.FC = () => {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+              className={`block w-full pl-10 pr-3 py-2 border ${nameError ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:ring-indigo-500 focus:border-indigo-500`}
               placeholder="John Doe"
               required
             />
           </div>
+          {nameError && <p className="mt-1 text-sm text-red-600">{nameError}</p>}
         </div>
         
         <div>
@@ -84,11 +143,12 @@ const SignupPage: React.FC = () => {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+              className={`block w-full pl-10 pr-3 py-2 border ${emailError ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:ring-indigo-500 focus:border-indigo-500`}
               placeholder="you@example.com"
               required
             />
           </div>
+          {emailError && <p className="mt-1 text-sm text-red-600">{emailError}</p>}
         </div>
         
         <div>
@@ -104,11 +164,12 @@ const SignupPage: React.FC = () => {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+              className={`block w-full pl-10 pr-3 py-2 border ${passwordError ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:ring-indigo-500 focus:border-indigo-500`}
               placeholder="••••••••"
               required
             />
           </div>
+          {passwordError && <p className="mt-1 text-sm text-red-600">{passwordError}</p>}
         </div>
         
         <div>
@@ -124,11 +185,60 @@ const SignupPage: React.FC = () => {
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+              className={`block w-full pl-10 pr-3 py-2 border ${confirmPasswordError ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:ring-indigo-500 focus:border-indigo-500`}
               placeholder="••••••••"
               required
             />
           </div>
+          {confirmPasswordError && <p className="mt-1 text-sm text-red-600">{confirmPasswordError}</p>}
+        </div>
+        
+        <div>
+          <label htmlFor="emergencyContactName" className="block text-sm font-medium text-gray-700 mb-1">
+            Emergency Contact Name
+          </label>
+          <input
+            id="emergencyContactName"
+            type="text"
+            value={emergencyContactName}
+            onChange={(e) => setEmergencyContactName(e.target.value)}
+            className={`block w-full px-3 py-2 border ${emergencyContactNameError ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:ring-indigo-500 focus:border-indigo-500`}
+            placeholder="Jane Doe"
+            required
+          />
+          {emergencyContactNameError && <p className="mt-1 text-sm text-red-600">{emergencyContactNameError}</p>}
+        </div>
+        
+        <div>
+          <label htmlFor="emergencyContactRelationship" className="block text-sm font-medium text-gray-700 mb-1">
+            Relationship to You
+          </label>
+          <input
+            id="emergencyContactRelationship"
+            type="text"
+            value={emergencyContactRelationship}
+            onChange={(e) => setEmergencyContactRelationship(e.target.value)}
+            className={`block w-full px-3 py-2 border ${emergencyContactRelationshipError ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:ring-indigo-500 focus:border-indigo-500`}
+            placeholder="Parent, Friend, Sibling, etc."
+            required
+          />
+          {emergencyContactRelationshipError && <p className="mt-1 text-sm text-red-600">{emergencyContactRelationshipError}</p>}
+        </div>
+        
+        <div>
+          <label htmlFor="emergencyContactEmail" className="block text-sm font-medium text-gray-700 mb-1">
+            Emergency Contact Email
+          </label>
+          <input
+            id="emergencyContactEmail"
+            type="email"
+            value={emergencyContactEmail}
+            onChange={(e) => setEmergencyContactEmail(e.target.value)}
+            className={`block w-full px-3 py-2 border ${emergencyContactEmailError ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:ring-indigo-500 focus:border-indigo-500`}
+            placeholder="contact@example.com"
+            required
+          />
+          {emergencyContactEmailError && <p className="mt-1 text-sm text-red-600">{emergencyContactEmailError}</p>}
         </div>
         
         <button

@@ -8,8 +8,9 @@ export interface User {
 export interface Contact {
   id: string;
   name: string;
-  email: string;
+  email?: string;
   relationship: 'counselor' | 'parent' | 'friend';
+  phone?: string;
 }
 
 export interface EQSession {
