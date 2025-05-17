@@ -110,13 +110,13 @@ const AnalyticsPage: React.FC = () => {
 
   // Helper: Infer mood label from moodScore
   const getMoodLabel = (score: number) => {
-    if (score >= 80) return 'Happy';
-    if (score >= 65) return 'Calm';
-    if (score >= 50) return 'Neutral';
-    if (score >= 35) return 'Anxious';
-    if (score >= 20) return 'Sad';
-    if (score > 0) return 'Angry';
-    return 'Distressed';
+    if (score > 90) return 'Happy';
+    if (score > 75) return 'Calm';
+    if (score > 65) return 'Neutral';
+    if (score > 50) return 'Anxious';
+    if (score > 35) return 'Sad';
+    if (score > 20) return 'Distressed';
+    return 'Suicidal';
   };
 
   // Format date for display (update to use consistent format)

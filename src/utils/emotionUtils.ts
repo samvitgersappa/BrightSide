@@ -9,37 +9,37 @@ export const emotionScores: Record<EmotionalState, {
   stabilityScore: number;
 }> = {
   'happy': { 
-    moodScore: 90, 
+    moodScore: 95, 
     distressLevel: 5, 
-    stabilityScore: 85 
+    stabilityScore: 90 
   },
   'calm': { 
-    moodScore: 78, 
-    distressLevel: 15, 
+    moodScore: 80, // more neutral than before
+    distressLevel: 12, 
     stabilityScore: 92 
   },
   'neutral': { 
-    moodScore: 55, 
+    moodScore: 55, // lower, more neutral
     distressLevel: 30, 
     stabilityScore: 65 
   },
   'anxious': { 
-    moodScore: 32, 
+    moodScore: 40, // slightly higher, but still below 50
     distressLevel: 68, 
     stabilityScore: 35 
   },
   'sad': { 
-    moodScore: 22, 
+    moodScore: 35, // lower, clearly negative
     distressLevel: 72, 
     stabilityScore: 30 
   },
   'angry': { 
-    moodScore: 18, 
+    moodScore: 25, // lower, clearly negative
     distressLevel: 80, 
     stabilityScore: 20 
   },
   'distressed': { 
-    moodScore: 8, 
+    moodScore: 15, // very low for suicidal/distressed
     distressLevel: 95, 
     stabilityScore: 10 
   }
