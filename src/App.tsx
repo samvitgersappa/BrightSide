@@ -38,8 +38,8 @@ function App() {
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
           
-          {/* Redirect root to dashboard or login */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          {/* Redirect root to signup instead of dashboard */}
+          <Route path="/" element={<Navigate to="/signup" replace />} />
           
           {/* 404 - Redirect to dashboard */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

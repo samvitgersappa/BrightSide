@@ -55,7 +55,7 @@ const DashboardLayout: React.FC = () => {
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center">
             <BrainCircuit className="h-8 w-8 text-indigo-600" />
-            <h1 className="ml-2 text-xl font-bold text-gray-800">EduSense</h1>
+            <h1 className="ml-2 text-xl font-bold text-gray-800">BrightSide</h1>
           </div>
         </div>
         
@@ -91,7 +91,7 @@ const DashboardLayout: React.FC = () => {
           <div className="flex items-center justify-between p-4">
             <div className="flex items-center">
               <BrainCircuit className="h-6 w-6 text-indigo-600" />
-              <h1 className="ml-2 text-lg font-bold text-gray-800">EduSense</h1>
+              <h1 className="ml-2 text-lg font-bold text-gray-800">BrightSide</h1>
             </div>
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}

@@ -10,7 +10,7 @@ const AuthLayout: React.FC = () => {
           <div className="inline-flex items-center justify-center">
             <BrainCircuit className="h-12 w-12 text-indigo-600" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-800 mt-4">EduSense</h1>
+          <h1 className="text-3xl font-bold text-gray-800 mt-4">BrightSide</h1>
           <p className="text-gray-600 mt-2">Emotional Intelligence & Communication Platform</p>
         </div>
         
@@ -19,7 +19,7 @@ const AuthLayout: React.FC = () => {
         </div>
         
         <div className="text-center mt-6 text-sm text-gray-500">
-          <p>© 2025 EduSense. All rights reserved.</p>
+          <p>© 2025 BrightSide. All rights reserved.</p>
         </div>
       </div>
     </div>
