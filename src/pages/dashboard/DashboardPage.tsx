@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   LineChart, BarChart, TrendingUp, TrendingDown, Minus, AlertTriangle, 
-  CheckCircle, Flame, AlertOctagon, Trophy, Activity, Target, Star,
+  Flame, AlertOctagon, Trophy, Activity, Target, Star,
   Award, Book, Zap, Calendar 
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -66,6 +66,26 @@ const DashboardPage: React.FC = () => {
   const [showWarnings, setShowWarnings] = useState(true);
   const [personalizedMetrics, setPersonalizedMetrics] = useState<PersonalizedMetrics | null>(null);
 
+  // Enhanced real-time debate performance tracking
+  const [debatePerformanceMetrics, setDebatePerformanceMetrics] = useState({
+    currentArgument: '',
+    argumentScore: 0,
+    realtimeScore: 0,
+    lastUpdateTimestamp: null
+  });
+
+  const [activeDebate, setActiveDebate] = useState<{
+    currentArgument: string;
+    score: number;
+    lastUpdate: Date | null;
+    inProgress: boolean;
+  }>({
+    currentArgument: '',
+    score: 0,
+    lastUpdate: null,
+    inProgress: false
+  });
+
   // Update dashboard data when new sessions arrive
   const updateDashboardData = useCallback(async () => {
     if (user) {
@@ -112,9 +132,35 @@ const DashboardPage: React.FC = () => {
         }
       });
       
+      // Enhanced debate subscription with real-time performance tracking
       const unsubscribeDebate = realtimeService.subscribe('debate', (session: DebateSession) => {
         if (session.userId === user.id) {
+          // Update overall dashboard data
           updateDashboardData().catch(console.error);
+          
+          // Update real-time debate status
+          if (session.inProgress) {
+            setActiveDebate({
+              currentArgument: session.currentArgument || '',
+              score: session.performanceMetrics.overallScore,
+              lastUpdate: session.lastArgumentTimestamp || new Date(),
+              inProgress: true
+            });
+          } else {
+            setActiveDebate(prev => ({
+              ...prev,
+              inProgress: false
+            }));
+          }
+
+          // Update debate averages immediately
+          setDebateAverages({
+            avgCoherence: session.performanceMetrics.coherence,
+            avgPersuasiveness: session.performanceMetrics.persuasiveness,
+            avgKnowledgeDepth: session.performanceMetrics.knowledgeDepth,
+            avgArticulation: session.performanceMetrics.articulation,
+            avgOverallScore: session.performanceMetrics.overallScore
+          });
         }
       });
       
@@ -609,22 +655,54 @@ const DashboardPage: React.FC = () => {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-800">Debate Performance</h2>
             <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-              <BarChart size={20} className="text-blue-600" />
+              {activeDebate.inProgress ? (
+                <div className="animate-pulse">
+                  <Activity size={20} className="text-blue-600" />
+                </div>
+              ) : (
+                <BarChart size={20} className="text-blue-600" />
+              )}
             </div>
           </div>
           
           <div className="space-y-3">
+            {activeDebate.inProgress && (
+              <div className="bg-blue-50 rounded-lg p-3 mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-blue-800">Active Debate Session</span>
+                  <span className="text-xs text-blue-600">
+                    Last update: {activeDebate.lastUpdate ? new Date(activeDebate.lastUpdate).toLocaleTimeString() : 'N/A'}
+                  </span>
+                </div>
+                <div className="text-sm text-blue-700 mb-2">
+                  Current Argument: {activeDebate.currentArgument || 'Listening...'}
+                </div>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-sm text-blue-600">Real-time Score</span>
+                  <span className={`font-medium ${getScoreColor(activeDebate.score)}`}>
+                    {activeDebate.score}/100
+                  </span>
+                </div>
+                <div className="w-full bg-blue-200 rounded-full h-2">
+                  <div 
+                    className="bg-blue-600 h-2 rounded-full transition-all duration-500" 
+                    style={{ width: `${activeDebate.score}%` }}
+                  ></div>
+                </div>
+              </div>
+            )}
+            
             <div>
               <div className="flex justify-between items-center mb-1">
-                <span className="text-sm text-gray-600">Last Session Score</span>
-                <span className={`font-medium ${getScoreColor(realTimeMetrics?.debateProgress?.lastScore || 50)}`}>
-                  {realTimeMetrics?.debateProgress?.lastScore || 'N/A'}/100
+                <span className="text-sm text-gray-600">Session Score</span>
+                <span className={`font-medium ${getScoreColor(debateAverages.avgOverallScore)}`}>
+                  {debateAverages.avgOverallScore}/100
                 </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div 
                   className="bg-blue-600 h-2 rounded-full transition-all duration-500" 
-                  style={{ width: `${realTimeMetrics?.debateProgress?.lastScore || 50}%` }}
+                  style={{ width: `${debateAverages.avgOverallScore}%` }}
                 ></div>
               </div>
             </div>

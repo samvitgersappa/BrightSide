@@ -30,6 +30,8 @@ export interface DebateSession {
   timestamp: Date;
   topic: string;
   transcript: string;
+  currentArgument?: string;
+  currentArgumentScore?: number;
   performanceMetrics: {
     coherence: number;
     persuasiveness: number;
@@ -38,6 +40,8 @@ export interface DebateSession {
     overallScore: number;
   };
   feedback: string;
+  lastArgumentTimestamp?: Date;
+  inProgress?: boolean;
 }
 
 export type EmotionalState = 'happy' | 'sad' | 'angry' | 'anxious' | 'neutral' | 'calm' | 'distressed';
