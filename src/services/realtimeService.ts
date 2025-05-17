@@ -15,37 +15,47 @@ class RealtimeService {
   }
 
   connect() {
-    // Using secure WebSocket for production, fallback to ws for local development
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    try {
+      // Using secure WebSocket for production, fallback to ws for local development
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/ws`;
+      
+      // For development environment, don't try to connect if we're in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log('WebSocket connection skipped in development mode');
+        return;
+      }
 
-    this.ws = new WebSocket(wsUrl);
+      this.ws = new WebSocket(wsUrl);
 
-    this.ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === 'eq_update') {
-          this.notifyListeners('eq', data.session);
-        } else if (data.type === 'debate_update') {
-          this.notifyListeners('debate', data.session);
+      this.ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'eq_update') {
+            this.notifyListeners('eq', data.session);
+          } else if (data.type === 'debate_update') {
+            this.notifyListeners('debate', data.session);
+          }
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
         }
-      } catch (error) {
-        console.error('Error parsing WebSocket message:', error);
-      }
-    };
+      };
 
-    this.ws.onclose = () => {
-      if (this.reconnectAttempts < this.maxReconnectAttempts) {
-        setTimeout(() => {
-          this.reconnectAttempts++;
-          this.connect();
-        }, 1000 * Math.pow(2, this.reconnectAttempts)); // Exponential backoff
-      }
-    };
+      this.ws.onclose = () => {
+        if (this.reconnectAttempts < this.maxReconnectAttempts) {
+          setTimeout(() => {
+            this.reconnectAttempts++;
+            this.connect();
+          }, 1000 * Math.pow(2, this.reconnectAttempts)); // Exponential backoff
+        }
+      };
 
-    this.ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-    };
+      this.ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+      };
+    } catch (error) {
+      console.error('Failed to establish WebSocket connection:', error);
+    }
   }
 
   subscribe(channel: DataChannel, listener: DataUpdateListener) {
