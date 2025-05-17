@@ -1,58 +1,66 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Calendar, BarChart as BarChartIcon, Activity, Brain } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { getRecentUserSessions } from '../../services/sessionService';
+import { getRecentUserDebateSessions } from '../../services/debateService';
+import { realtimeService } from '../../services/realtimeService';
 
-// Mock data for the analytics
-const mockEQData = [
-  { date: '2025-04-01', moodScore: 65, distressLevel: 40, stabilityScore: 70 },
-  { date: '2025-04-08', moodScore: 70, distressLevel: 35, stabilityScore: 75 },
-  { date: '2025-04-15', moodScore: 60, distressLevel: 50, stabilityScore: 65 },
-  { date: '2025-04-22', moodScore: 72, distressLevel: 30, stabilityScore: 80 },
-  { date: '2025-04-29', moodScore: 75, distressLevel: 25, stabilityScore: 82 },
-  { date: '2025-05-05', moodScore: 90, distressLevel: 15, stabilityScore: 85 },
-  { date: '2025-05-10', moodScore: 65, distressLevel: 45, stabilityScore: 60 },
-  { date: '2025-05-15', moodScore: 85, distressLevel: 20, stabilityScore: 75 },
-];
-
-const mockDebateData = [
-  { date: '2025-04-02', topic: 'AI Ethics', coherence: 75, persuasiveness: 70, knowledgeDepth: 65, articulation: 80, overallScore: 72 },
-  { date: '2025-04-10', topic: 'Clean Energy', coherence: 70, persuasiveness: 75, knowledgeDepth: 72, articulation: 78, overallScore: 74 },
-  { date: '2025-04-18', topic: 'Robotics', coherence: 80, persuasiveness: 78, knowledgeDepth: 82, articulation: 75, overallScore: 79 },
-  { date: '2025-04-25', topic: 'Bioengineering', coherence: 78, persuasiveness: 80, knowledgeDepth: 85, articulation: 79, overallScore: 80 },
-  { date: '2025-05-02', topic: 'Quantum Computing', coherence: 85, persuasiveness: 82, knowledgeDepth: 88, articulation: 84, overallScore: 85 },
-  { date: '2025-05-08', topic: 'Renewable Energy', coherence: 74, persuasiveness: 76, knowledgeDepth: 78, articulation: 75, overallScore: 76 },
-  { date: '2025-05-14', topic: 'AI Ethics', coherence: 82, persuasiveness: 80, knowledgeDepth: 85, articulation: 81, overallScore: 82 },
-];
+// Removed mock data
 
 const AnalyticsPage: React.FC = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'eq' | 'debate'>('eq');
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'all'>('all');
-  
+  const [eqData, setEQData] = useState<any[]>([]);
+  const [debateData, setDebateData] = useState<any[]>([]);
+
+  // Fetch initial data and subscribe to real-time updates
+  useEffect(() => {
+    if (!user) return;
+    // Initial fetch
+    setEQData(getRecentUserSessions(user.id, 365));
+    setDebateData(getRecentUserDebateSessions(user.id, 365));
+
+    // Real-time listeners
+    const unsubEQ = realtimeService.subscribe('eq', (session: any) => {
+      if (session.userId === user.id) {
+        setEQData(prev => [...prev, session]);
+      }
+    });
+    const unsubDebate = realtimeService.subscribe('debate', (session: any) => {
+      if (session.userId === user.id) {
+        setDebateData(prev => [...prev, session]);
+      }
+    });
+    return () => {
+      unsubEQ && unsubEQ();
+      unsubDebate && unsubDebate();
+    };
+  }, [user]);
+
   // Filter data based on selected time range
   const filterDataByTimeRange = (data: any[]) => {
     const now = new Date();
     const msPerDay = 24 * 60 * 60 * 1000;
-    
     if (timeRange === 'week') {
       const weekAgo = new Date(now.getTime() - 7 * msPerDay);
-      return data.filter(item => new Date(item.date) >= weekAgo);
+      return data.filter(item => new Date(item.timestamp || item.date) >= weekAgo);
     } else if (timeRange === 'month') {
       const monthAgo = new Date(now.getTime() - 30 * msPerDay);
-      return data.filter(item => new Date(item.date) >= monthAgo);
+      return data.filter(item => new Date(item.timestamp || item.date) >= monthAgo);
     }
-    
     return data;
   };
-  
-  const filteredEQData = filterDataByTimeRange(mockEQData);
-  const filteredDebateData = filterDataByTimeRange(mockDebateData);
-  
+
+  const filteredEQData = filterDataByTimeRange(eqData);
+  const filteredDebateData = filterDataByTimeRange(debateData);
+
   // Calculate average scores
   const calculateAverages = () => {
     if (activeTab === 'eq') {
       const data = filteredEQData;
+      if (!data.length) return { avgMood: 0, avgDistress: 0, avgStability: 0 };
       return {
         avgMood: Math.round(data.reduce((sum, item) => sum + item.moodScore, 0) / data.length),
         avgDistress: Math.round(data.reduce((sum, item) => sum + item.distressLevel, 0) / data.length),
@@ -60,24 +68,25 @@ const AnalyticsPage: React.FC = () => {
       };
     } else {
       const data = filteredDebateData;
+      if (!data.length) return { avgCoherence: 0, avgPersuasiveness: 0, avgKnowledge: 0, avgArticulation: 0, avgOverall: 0 };
       return {
-        avgCoherence: Math.round(data.reduce((sum, item) => sum + item.coherence, 0) / data.length),
-        avgPersuasiveness: Math.round(data.reduce((sum, item) => sum + item.persuasiveness, 0) / data.length),
-        avgKnowledge: Math.round(data.reduce((sum, item) => sum + item.knowledgeDepth, 0) / data.length),
-        avgArticulation: Math.round(data.reduce((sum, item) => sum + item.articulation, 0) / data.length),
-        avgOverall: Math.round(data.reduce((sum, item) => sum + item.overallScore, 0) / data.length),
+        avgCoherence: Math.round(data.reduce((sum, item) => sum + (item.performanceMetrics?.coherence ?? item.coherence ?? 0), 0) / data.length),
+        avgPersuasiveness: Math.round(data.reduce((sum, item) => sum + (item.performanceMetrics?.persuasiveness ?? item.persuasiveness ?? 0), 0) / data.length),
+        avgKnowledge: Math.round(data.reduce((sum, item) => sum + (item.performanceMetrics?.knowledgeDepth ?? item.knowledgeDepth ?? 0), 0) / data.length),
+        avgArticulation: Math.round(data.reduce((sum, item) => sum + (item.performanceMetrics?.articulation ?? item.articulation ?? 0), 0) / data.length),
+        avgOverall: Math.round(data.reduce((sum, item) => sum + (item.performanceMetrics?.overallScore ?? item.overallScore ?? 0), 0) / data.length),
       };
     }
   };
-  
+
   const averages = calculateAverages();
-  
+
   // Format date for display
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+  const formatDate = (dateValue: string | Date) => {
+    const date = new Date(dateValue);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
-  
+
   // Helper for score color
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-green-600';
@@ -171,8 +180,8 @@ const AnalyticsPage: React.FC = () => {
             <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-medium text-gray-500">Average Mood</h3>
-                <span className={`text-lg font-semibold ${getScoreColor(averages.avgMood)}`}>
-                  {averages.avgMood}/100
+                <span className={`text-lg font-semibold ${getScoreColor(averages.avgMood ?? 0)}`}>
+                  {averages.avgMood ?? 0}/100
                 </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
@@ -186,8 +195,8 @@ const AnalyticsPage: React.FC = () => {
             <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-medium text-gray-500">Average Distress</h3>
-                <span className={`text-lg font-semibold ${getScoreColor(100 - averages.avgDistress)}`}>
-                  {averages.avgDistress}/100
+                <span className={`text-lg font-semibold ${getScoreColor(100 - (averages.avgDistress ?? 0))}`}>
+                  {averages.avgDistress ?? 0}/100
                 </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
@@ -201,8 +210,8 @@ const AnalyticsPage: React.FC = () => {
             <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-medium text-gray-500">Emotional Stability</h3>
-                <span className={`text-lg font-semibold ${getScoreColor(averages.avgStability)}`}>
-                  {averages.avgStability}/100
+                <span className={`text-lg font-semibold ${getScoreColor(averages.avgStability ?? 0)}`}>
+                  {averages.avgStability ?? 0}/100
                 </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
@@ -282,7 +291,7 @@ const AnalyticsPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredEQData.map((session, index) => (
+                  {filteredEQData.map((session) => (
                     <tr key={session.date}>
                       <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
                         {formatDate(session.date)}
@@ -327,8 +336,8 @@ const AnalyticsPage: React.FC = () => {
             <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-medium text-gray-500">Overall Score</h3>
-                <span className={`text-lg font-semibold ${getScoreColor(averages.avgOverall)}`}>
-                  {averages.avgOverall}/100
+                <span className={`text-lg font-semibold ${getScoreColor(averages.avgOverall ?? 0)}`}>
+                  {averages.avgOverall ?? 0}/100
                 </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
@@ -342,8 +351,8 @@ const AnalyticsPage: React.FC = () => {
             <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-medium text-gray-500">Knowledge Depth</h3>
-                <span className={`text-lg font-semibold ${getScoreColor(averages.avgKnowledge)}`}>
-                  {averages.avgKnowledge}/100
+                <span className={`text-lg font-semibold ${getScoreColor(averages.avgKnowledge ?? 0)}`}>
+                  {averages.avgKnowledge ?? 0}/100
                 </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
@@ -357,8 +366,8 @@ const AnalyticsPage: React.FC = () => {
             <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-medium text-gray-500">Persuasiveness</h3>
-                <span className={`text-lg font-semibold ${getScoreColor(averages.avgPersuasiveness)}`}>
-                  {averages.avgPersuasiveness}/100
+                <span className={`text-lg font-semibold ${getScoreColor(averages.avgPersuasiveness ?? 0)}`}>
+                  {averages.avgPersuasiveness ?? 0}/100
                 </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
