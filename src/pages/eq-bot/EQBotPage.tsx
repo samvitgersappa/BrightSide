@@ -59,7 +59,13 @@ const EQBotPage: React.FC = () => {
   const [showScores, setShowScores] = useState(true);
   const [distressThreshold, setDistressThreshold] = useState(70); // Default threshold
   const [alertSent, setAlertSent] = useState(false);
+  const [pitchScore, setPitchScore] = useState<number | null>(null);
+  const [recentPitchScores, setRecentPitchScores] = useState<number[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const pitchWorkerRef = useRef<Worker | null>(null);
+  const audioProcessorRef = useRef<ScriptProcessorNode | null>(null);
   // Speech recognition ref and intermediate transcript state
   const recognitionRef = useRef<any>(null);
   const [interimTranscript, setInterimTranscript] = useState<string>('');
@@ -515,7 +521,7 @@ const EQBotPage: React.FC = () => {
     
     // Save the session for dashboard tracking
     if (user) {
-      const session = createAndSaveEQSession(user, input.trim(), detectedEmotion);
+      const session = createAndSaveEQSession(user, input.trim(), detectedEmotion, pitchScore ?? undefined);
       console.log('Saved EQ session:', session);
     }
     
@@ -631,6 +637,60 @@ const EQBotPage: React.FC = () => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   };
+
+  // Helper: Normalize pitch (Hz) to 0-100 (example: 80-300Hz typical speaking range)
+  const normalizePitch = (hz: number) => {
+    if (hz < 80 || hz > 400) return 0;
+    // Map 80-300Hz to 0-100
+    return Math.max(0, Math.min(100, Math.round(((hz - 80) / (300 - 80)) * 100)));
+  };
+
+  // Start/stop audio recording for pitch analysis
+  const startPitchDetection = async () => {
+    if (!navigator.mediaDevices.getUserMedia) return;
+    audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    mediaStreamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const source = audioContextRef.current.createMediaStreamSource(mediaStreamRef.current);
+    const processor = audioContextRef.current.createScriptProcessor(2048, 1, 1);
+    audioProcessorRef.current = processor;
+    // Vite-compatible worker instantiation
+    pitchWorkerRef.current = new Worker(new URL('../../workers/pitchDetection.js', import.meta.url), { type: 'module' });
+    processor.onaudioprocess = (e) => {
+      const input = e.inputBuffer.getChannelData(0);
+      pitchWorkerRef.current?.postMessage({ audioBuffer: Array.from(input), sampleRate: audioContextRef.current!.sampleRate });
+    };
+    pitchWorkerRef.current.onmessage = (e) => {
+      const { pitch } = e.data;
+      if (pitch && pitch > 0) {
+        const score = normalizePitch(pitch);
+        setPitchScore(score);
+        setRecentPitchScores((prev) => [...prev.slice(-19), score]);
+      }
+    };
+    source.connect(processor);
+    processor.connect(audioContextRef.current.destination);
+  };
+  const stopPitchDetection = () => {
+    audioProcessorRef.current?.disconnect();
+    audioContextRef.current?.close();
+    mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
+    pitchWorkerRef.current?.terminate();
+    audioProcessorRef.current = null;
+    audioContextRef.current = null;
+    mediaStreamRef.current = null;
+    pitchWorkerRef.current = null;
+  };
+
+  // Start/stop pitch detection with speech recognition
+  useEffect(() => {
+    if (isRecording) {
+      startPitchDetection();
+    } else {
+      stopPitchDetection();
+    }
+    // Cleanup on unmount
+    return () => stopPitchDetection();
+  }, [isRecording]);
 
   const getEmotionColor = (emotion: EmotionalState) => {
     switch (emotion) {
@@ -757,7 +817,7 @@ const EQBotPage: React.FC = () => {
               }`}
             >
               <p>{message.content}</p>
-              <span className={`text-xs px-2 py-1 rounded-full mt-2 inline-block ${getEmotionColor(message.emotionalState)}`}>
+              <span className={`text-xs px-2 py-1 rounded-full mt-2 inline-block ${getEmotionColor(message.emotionalState, showScores)}`}>
                 {formatEmotionalState(message.emotionalState, showScores)}
               </span>
             </div>
@@ -919,6 +979,37 @@ const EQBotPage: React.FC = () => {
             )}
           </div>
         )}
+      </div>
+
+      <div className="flex flex-col md:flex-row gap-4 mt-4">
+        <div className="flex-1">
+          {/* ...existing chat UI ... */}
+        </div>
+        {/* Pitch Analysis Widget */}
+        <div className="w-full md:w-64 bg-white rounded-lg shadow p-4 border border-gray-200">
+          <h3 className="text-sm font-medium text-gray-500 mb-1">Pitch Analysis</h3>
+          <span className="text-lg font-semibold">
+            {pitchScore !== null ? `${pitchScore}/100` : 'N/A/100'}
+          </span>
+          <div className="text-xs text-gray-500 mb-1">
+            {pitchScore !== null ? `Current Score` : 'N/A'}
+          </div>
+          <div className="bg-indigo-100 h-2 rounded-full mb-2" style={{ width: '100%' }}>
+            <div className="bg-indigo-500 h-2 rounded-full" style={{ width: `${pitchScore ?? 0}%` }}></div>
+          </div>
+          <p className="text-xs text-gray-400 mb-1">Recent Pitch Scores:</p>
+          <div className="flex flex-wrap gap-1">
+            {recentPitchScores.length === 0 ? (
+              <span className="text-xs text-gray-400">No data</span>
+            ) : (
+              recentPitchScores.slice(-10).reverse().map((score, idx) => (
+                <span key={idx} className="inline-block bg-indigo-200 text-indigo-800 rounded px-2 py-0.5 text-xs">
+                  {score}
+                </span>
+              ))
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

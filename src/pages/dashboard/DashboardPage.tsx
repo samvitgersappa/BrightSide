@@ -261,6 +261,49 @@ const DashboardPage: React.FC = () => {
     return 'text-red-500';
   };
 
+  // Pitch score helpers
+  const getPitchScoreColor = (score: number | undefined) => {
+    if (score === undefined) return 'text-gray-400';
+    if (score >= 80) return 'text-emerald-600';
+    if (score >= 65) return 'text-blue-600';
+    if (score >= 50) return 'text-yellow-600';
+    if (score >= 35) return 'text-orange-600';
+    return 'text-red-600';
+  };
+
+  const getPitchLabel = (score: number | undefined) => {
+    if (score === undefined) return 'N/A';
+    if (score > 85) return 'Excellent';
+    if (score > 70) return 'Good';
+    if (score > 55) return 'Average';
+    if (score > 40) return 'Below Avg';
+    return 'Needs Work';
+  };
+
+  // Calculate average pitch score from recent EQ sessions
+  const pitchScores = recentEQSessions
+    .map(s => typeof s.pitchScore === 'number' ? s.pitchScore : undefined)
+    .filter((s): s is number => s !== undefined && !isNaN(s));
+  const avgPitchScore = pitchScores.length > 0
+    ? Math.round(pitchScores.reduce((a, b) => a + b, 0) / pitchScores.length)
+    : undefined;
+
+  // Calculate weighted average of EQ score (moodScore) and pitchScore for each session
+  // Weight: 70% EQ (moodScore), 30% pitchScore
+  const weightedCombinedScores = recentEQSessions
+    .map(s => {
+      if (typeof s.pitchScore === 'number' && typeof s.moodScore === 'number') {
+        return Math.round(s.moodScore * 0.7 + s.pitchScore * 0.3);
+      }
+      if (typeof s.moodScore === 'number') return s.moodScore;
+      if (typeof s.pitchScore === 'number') return s.pitchScore;
+      return undefined;
+    })
+    .filter((s): s is number => s !== undefined && !isNaN(s));
+  const avgWeightedCombinedScore = weightedCombinedScores.length > 0
+    ? Math.round(weightedCombinedScores.reduce((a, b) => a + b, 0) / weightedCombinedScores.length)
+    : undefined;
+
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -773,6 +816,34 @@ const DashboardPage: React.FC = () => {
         </div>
       </div>
       
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        {/* Pitch Analysis Widget - New Section */}
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium text-gray-500">Pitch Analysis</h3>
+            <span className={`text-lg font-semibold ${getPitchScoreColor(avgWeightedCombinedScore)}`}>{avgWeightedCombinedScore !== undefined ? `${avgWeightedCombinedScore}/100` : 'N/A/100'}</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+            <div className="bg-indigo-500 h-2 rounded-full" style={{ width: `${avgWeightedCombinedScore !== undefined ? avgWeightedCombinedScore : 0}%` }}></div>
+          </div>
+          <div className="text-xs text-gray-500 mb-1">{getPitchLabel(avgWeightedCombinedScore)}</div>
+          <div className="text-xs text-blue-600 mb-1">
+            (Weighted: 70% EQ, 30% Pitch)
+          </div>
+          <div className="mt-2">
+            <p className="text-xs text-gray-400 mb-1">Recent Pitch Scores:</p>
+            <div className="flex flex-wrap gap-2">
+              {pitchScores.slice(-5).reverse().map((score, idx) => (
+                <span key={idx} className={`px-2 py-1 rounded-full text-xs font-semibold ${getPitchScoreColor(score)} bg-gray-100`}>
+                  {score}
+                </span>
+              ))}
+              {pitchScores.length === 0 && <span className="text-gray-400">No data</span>}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         {/* Insights & Trends Section */}
         {/* EQ Trends */}

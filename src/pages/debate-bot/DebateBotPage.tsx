@@ -65,35 +65,35 @@ const debateTopics = [
   },
   { 
     id: '2', 
-    title: 'Nuclear Energy vs. Renewable Energy', 
-    description: 'Debate whether nuclear energy should be prioritized over other renewable sources.',
+    title: 'Should Nuclear Energy Be Prioritized Over Renewables?', 
+    description: 'Debate whether nuclear energy should be prioritized over other renewable energy sources.',
     forArguments: ['Higher energy density', 'Lower land footprint', 'Consistent power generation'],
     againstArguments: ['Waste management issues', 'Safety concerns', 'High initial investment']
   },
   { 
     id: '3', 
-    title: 'Remote Work Should Be the Standard', 
+    title: 'Should Remote Work Be the Standard?', 
     description: 'Debate whether companies should make remote work the default option.',
     forArguments: ['Better work-life balance', 'Reduced commute pollution', 'Access to global talent'],
     againstArguments: ['Decreased collaboration', 'Isolation issues', 'Infrastructure inequality']
   },
   { 
     id: '4', 
-    title: 'Social Media: Net Positive or Negative?', 
+    title: 'Is Social Media Beneficial or Harmful for Society?', 
     description: 'Debate whether social media has been beneficial or harmful for society.',
     forArguments: ['Global connectivity', 'Information sharing', 'Support communities'],
     againstArguments: ['Mental health issues', 'Privacy concerns', 'Misinformation spread']
   },
   { 
     id: '5', 
-    title: 'Space Exploration vs. Earth Problems', 
-    description: 'Debate whether we should focus more resources on space exploration or solving Earth\'s problems.',
+    title: 'Should We Focus More on Space Exploration or Solving Earth’s Problems?', 
+    description: 'Debate whether more resources should go to space exploration or to solving problems on Earth.',
     forArguments: ['Technological innovation', 'Human species survival', 'Scientific discoveries'],
     againstArguments: ['Immediate Earth crises', 'High costs', 'Benefit primarily wealthy nations']
   },
   { 
     id: '6', 
-    title: 'Universal Basic Income', 
+    title: 'Should Governments Implement Universal Basic Income?', 
     description: 'Debate whether governments should implement universal basic income.',
     forArguments: ['Poverty reduction', 'Economic stability', 'Adaptation to automation'],
     againstArguments: ['Cost concerns', 'Reduced incentive to work', 'Inflation risks']

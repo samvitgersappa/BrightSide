@@ -11,10 +11,10 @@ let eqSessions: EQSession[] = [];
 export const createAndSaveEQSession = (
   user: User,
   message: string,
-  emotion: EmotionalState
+  emotion: EmotionalState,
+  pitchScore?: number // Add pitchScore as optional
 ): EQSession => {
   const scores = getEmotionalScores(emotion, message);
-  
   const session: EQSession = {
     id: Date.now().toString(),
     userId: user.id,
@@ -25,13 +25,11 @@ export const createAndSaveEQSession = (
     transcript: message,
     summary: `User expressed ${emotion} sentiment.`,
     alertSent: scores.distressLevel > 70,
+    ...(pitchScore !== undefined ? { pitchScore } : {})
   };
-  
   eqSessions.push(session);
-  
   // Emit real-time update
   realtimeService.simulateUpdate('eq', session);
-  
   return session;
 };
 

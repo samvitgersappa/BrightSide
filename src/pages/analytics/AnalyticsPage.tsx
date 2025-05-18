@@ -23,6 +23,8 @@ import {
   Tooltip as ChartTooltip,
   Legend as ChartLegend
 } from 'chart.js';
+import { PDFDownloadLink } from '@react-pdf/renderer';
+import AnalyticsPDFReport from './AnalyticsPDFReport';
 
 ChartJS.register(
   CategoryScale,
@@ -45,6 +47,7 @@ const AnalyticsPage: React.FC = () => {
   const [eqData, setEQData] = useState<any[]>([]);
   const [debateData, setDebateData] = useState<any[]>([]);
   const [quizData, setQuizData] = useState<QuizSession[]>([]);
+  const [showPDF, setShowPDF] = useState(false);
 
   // Fetch initial data and subscribe to real-time updates
   useEffect(() => {
@@ -558,17 +561,61 @@ const AnalyticsPage: React.FC = () => {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
+  // Helper to sanitize session data for PDF (convert dates to strings, remove functions, etc.)
+  function sanitizeSessions<T extends Record<string, any>>(sessions: T[]): T[] {
+    return sessions.map((session) => {
+      const sanitized = { ...session };
+      if ((sanitized as any).date instanceof Date) (sanitized as any).date = (sanitized as any).date.toISOString();
+      if ((sanitized as any).timestamp instanceof Date) (sanitized as any).timestamp = (sanitized as any).timestamp.toISOString();
+      Object.keys(sanitized).forEach((key) => {
+        if (typeof sanitized[key] === 'function') delete sanitized[key];
+      });
+      return sanitized;
+    });
+  }
+
   return (
     <div>
       <header className="mb-6">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Analytics</h1>
         <p className="text-gray-600 mt-1">Track your emotional health and debate performance over time</p>
         <button
-          onClick={handleGenerateReport}
+          onClick={() => setShowPDF(true)}
           className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 transition-colors text-sm font-semibold"
         >
           Generate Report (PDF)
         </button>
+        {showPDF && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+            <div className="bg-white rounded-lg shadow-lg p-6 max-w-2xl w-full relative">
+              <button
+                onClick={() => setShowPDF(false)}
+                className="absolute top-2 right-2 text-gray-400 hover:text-gray-700"
+              >
+                ✕
+              </button>
+              <h2 className="text-lg font-bold mb-4">PDF Preview</h2>
+              <div style={{ height: 500, overflow: 'auto', border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 16 }}>
+                <PDFDownloadLink
+                  document={
+                    <AnalyticsPDFReport
+                      user={user ? { ...user, name: user.name || '', id: user.id || '' } : { name: '', id: '' }}
+                      eqData={sanitizeSessions(eqData)}
+                      debateData={sanitizeSessions(debateData)}
+                      quizData={sanitizeSessions(quizData)}
+                      averages={averages}
+                      timeRange={timeRange}
+                    />
+                  }
+                  fileName={`brightside_analytics_report_${timeRange}_${new Date().toISOString().split('T')[0]}.pdf`}
+                  style={{ display: 'block', margin: '16px 0', color: '#6366f1', fontWeight: 600 }}
+                >
+                  {({ loading }) => loading ? 'Preparing PDF...' : 'Download PDF'}
+                </PDFDownloadLink>
+              </div>
+            </div>
+          </div>
+        )}
       </header>
       <div id="analytics-report-content">
         {/* Tabs */}
@@ -683,7 +730,6 @@ const AnalyticsPage: React.FC = () => {
                 <>
                   {/* Quiz Performance Summary */}
                   {(() => {
-                    const analytics = calculateQuizAnalytics(quizData);
                     const filteredQuizData = filterDataByTimeRange(quizData);
                     const recentAnalytics = calculateQuizAnalytics(filteredQuizData);
 

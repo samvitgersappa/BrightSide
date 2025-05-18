@@ -23,6 +23,7 @@ export interface EQSession {
   transcript: string;
   summary: string;
   alertSent: boolean;
+  pitchScore?: number; // Pitch analysis score (0-100 or undefined if not available)
 }
 
 export interface DebateSession {
