@@ -723,7 +723,29 @@ const DashboardPage: React.FC = () => {
                 ></div>
               </div>
             </div>
-            
+
+            {/* Speech Analysis Section */}
+            <div className="border-t border-gray-100 pt-3 mt-3">
+              <p className="text-sm font-medium text-gray-700 mb-2">Speech Analysis</p>
+              <div className="flex items-center bg-gray-50 p-3 rounded-lg">
+                <div className={`w-2 h-2 rounded-full mr-2 ${
+                  (debateAverages.avgOverallScore || 50) > 50 ? 'bg-green-500' : 'bg-yellow-500'
+                } animate-pulse`}></div>
+                <div>
+                  <p className={`text-sm font-medium ${
+                    (debateAverages.avgOverallScore || 50) > 50 ? 'text-green-700' : 'text-yellow-700'
+                  }`}>
+                    {(debateAverages.avgOverallScore || 50) > 50 ? 'Confident' : 'Underconfident'}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {(debateAverages.avgOverallScore || 50) > 50 
+                      ? 'Your speech patterns show strong confidence in your arguments'
+                      : 'Try to maintain a more assertive tone in your arguments'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="mt-2">
               <p className="text-sm text-gray-600 mb-2">Recent Topics:</p>
               <div className="space-y-2">

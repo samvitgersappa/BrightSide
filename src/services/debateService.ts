@@ -16,9 +16,19 @@ export const createAndSaveDebateSession = (
   knowledgeDepth: number,
   articulation: number
 ): DebateSession => {
-  // Calculate overall score as average of individual metrics
+  // Calculate overall score with weighted metrics
+  const weights = {
+    coherence: 0.3,       // Most important - logical flow and structure
+    persuasiveness: 0.3,  // Equally important - argument effectiveness
+    knowledgeDepth: 0.25, // Important but slightly less - factual support
+    articulation: 0.15    // Least important - presentation style
+  };
+  
   const overallScore = Math.round(
-    (coherence + persuasiveness + knowledgeDepth + articulation) / 4
+    (coherence * weights.coherence) +
+    (persuasiveness * weights.persuasiveness) +
+    (knowledgeDepth * weights.knowledgeDepth) +
+    (articulation * weights.articulation)
   );
   
   const feedback = generateFeedback(coherence, persuasiveness, knowledgeDepth, articulation);

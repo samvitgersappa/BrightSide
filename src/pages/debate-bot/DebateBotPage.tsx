@@ -365,23 +365,63 @@ const DebateBotPage: React.FC = () => {
       if (response?.content) {
         // Score the argument if debate has started and generate performance metrics
         let argumentScore = 0;
-        if (debateState.started) {
-          // Generate more meaningful scores based on response content length and complexity
+        if (debateState.started && response.content) {
+          // Analyze response quality based on stance and argument coherence
           const contentLength = response.content.length;
-          const coherence = Math.floor(Math.random() * 20) + 70; // Base coherence score
-          const persuasiveness = Math.min(100, Math.floor(contentLength / 50) + 65); // Longer responses tend to be more persuasive
-          const knowledgeDepth = Math.floor(Math.random() * 25) + 70;
-          const articulation = Math.floor(Math.random() * 15) + 75;
+          const wordCount = response.content.split(/\s+/).length;
           
-          // Calculate overall score
-          argumentScore = Math.round((coherence + persuasiveness + knowledgeDepth + articulation) / 4);
+          // Check for stance consistency
+          const stanceKeywords = debateState.stance === 'for' ? ['support', 'agree', 'favor', 'benefit', 'advantage'] : 
+                                                              ['against', 'disagree', 'oppose', 'drawback', 'disadvantage'];
+          const stanceAlignment = stanceKeywords.some(keyword => 
+            response.content.toLowerCase().includes(keyword)
+          ) ? 1 : 0.5;
+
+          // Base metric calculations with stance influence
+          const coherence = Math.min(100, 
+            Math.round((50 + 
+              (wordCount / 20) + // More words generally mean better coherence
+              (response.content.includes('because') ? 10 : 0) + // Reasoning
+              (response.content.includes('for example') ? 10 : 0) // Examples
+            ) * stanceAlignment)
+          );
+
+          const persuasiveness = Math.min(100,
+            Math.round((45 + 
+              (response.content.includes('research') ? 15 : 0) + // Research backing
+              (response.content.includes('study') ? 15 : 0) + // Study references
+              (contentLength / 100) // Length contribution
+            ) * stanceAlignment)
+          );
+
+          const knowledgeDepth = Math.min(100,
+            Math.round((40 + 
+              (response.content.includes('according to') ? 20 : 0) + // Source citation
+              (response.content.includes('statistics') ? 20 : 0) + // Data usage
+              (wordCount / 15) // Vocabulary breadth
+            ) * stanceAlignment)
+          );
+
+          const articulation = Math.min(100,
+            Math.round((50 +
+              (response.content.includes(',') ? 10 : 0) + // Complex sentences
+              (response.content.includes(';') ? 15 : 0) + // Advanced punctuation
+              (wordCount / 25) // Fluency
+            ) * stanceAlignment)
+          );
+          
+          // Calculate overall score with stance alignment impact
+          argumentScore = Math.round(
+            ((coherence + persuasiveness + knowledgeDepth + articulation) / 4) * 
+            (stanceAlignment === 1 ? 1 : 0.7) // Significant penalty for stance misalignment
+          );
           
           // Update local state
           setDebateState(prev => ({
             ...prev,
-            score: prev.score + argumentScore
+            score: Math.round((prev.score + argumentScore) / 2) // Rolling average
           }));
-          
+
           // If we have enough messages for a complete debate (at least 4 exchanges)
           if (messages.length >= 6 && user) {
             // Save the debate session to create a real-time update for the dashboard
