@@ -11,6 +11,7 @@ import DebateBotPage from './pages/debate-bot/DebateBotPage';
 import AnalyticsPage from './pages/analytics/AnalyticsPage';
 import SettingsPage from './pages/settings/SettingsPage';
 import QuizPage from './pages/quiz/QuizPage';
+import ResourcesPage from './pages/resources/ResourcesPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -37,6 +38,7 @@ function App() {
             <Route path="/debate-bot" element={<DebateBotPage />} />
             <Route path="/quiz" element={<QuizPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
+            <Route path="/resources" element={<ResourcesPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
           

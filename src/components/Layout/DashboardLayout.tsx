@@ -30,6 +30,7 @@ const DashboardLayout: React.FC = () => {
     { to: '/debate-bot', icon: <MessageCircle size={20} />, label: 'Debate Bot' },
     { to: '/quiz', icon: <Book size={20} />, label: 'CS Quizzes' },
     { to: '/analytics', icon: <BarChart2 size={20} />, label: 'Analytics' },
+    { to: '/resources', icon: <Book size={20} />, label: 'Resources' }, // Ensure correct path
     { to: '/settings', icon: <Settings size={20} />, label: 'Settings' },
   ];
 
